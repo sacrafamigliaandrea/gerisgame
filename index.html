@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Mossa di Geri · Geri's Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --grass: #6FA84D;
+  --grass-deep: #4F8033;
+  --grass-soft: #C9DFB8;
+  --wool: #F5F0E8;
+  --wool-dark: #E8DFD0;
+  --rose: #E8B5BB;
+  --rose-deep: #B96773;
+  --rose-soft: #FBEEF0;
+  --ink: #2C3E50;
+  --ink-soft: #5A6E7E;
+  --amber: #F0A830;
+  --paper: #FAF7F0;
+  --shadow: 0 6px 24px rgba(44,62,80,.08);
+  --shadow-strong: 0 12px 40px rgba(44,62,80,.18);
+  --r: 14px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  overflow: hidden;
+  line-height: 1.5;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 1;
+  background-image: radial-gradient(rgba(44,62,80,.025) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; letter-spacing: -.01em; }
+
+/* ============ WELCOME ============ */
+.welcome {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--grass) 0%, var(--grass-deep) 100%);
+  transition: opacity .6s ease, visibility .6s ease;
+  padding: 20px;
+}
+.welcome.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.welcome::before {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    radial-gradient(ellipse at 20% 30%, rgba(255,255,255,.08), transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(255,255,255,.06), transparent 50%);
+  pointer-events: none;
+}
+.welcome-card {
+  background: var(--wool);
+  padding: 56px 48px 48px;
+  border-radius: 24px;
+  max-width: 540px;
+  box-shadow: var(--shadow-strong);
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+.welcome-card .deco {
+  position: absolute; top: -38px; left: 50%;
+  transform: translateX(-50%);
+  width: 76px; height: 76px;
+  background: var(--wool);
+  border-radius: 50%;
+  padding: 12px;
+  box-shadow: var(--shadow);
+  display: flex; align-items: center; justify-content: center;
+}
+.welcome h1 {
+  font-size: 40px;
+  color: var(--grass-deep);
+  margin-top: 8px;
+}
+.welcome .subtitle {
+  font-style: italic;
+  font-family: 'Fraunces', serif;
+  color: var(--ink-soft);
+  font-size: 18px;
+  margin: 8px 0 24px;
+}
+.welcome .desc {
+  color: var(--ink);
+  font-size: 15px;
+  margin-bottom: 28px;
+  max-width: 420px;
+  margin-left: auto; margin-right: auto;
+}
+.welcome .name-input {
+  width: 100%; max-width: 320px;
+  padding: 12px 18px;
+  border: 2px solid var(--wool-dark);
+  border-radius: 999px;
+  font-family: inherit; font-size: 15px;
+  text-align: center;
+  margin-bottom: 18px;
+  background: white; color: var(--ink);
+}
+.welcome .name-input:focus { outline: none; border-color: var(--grass); }
+.start-btn {
+  background: var(--grass-deep);
+  color: var(--wool);
+  border: none;
+  padding: 16px 40px;
+  border-radius: 999px;
+  font-family: inherit; font-size: 17px; font-weight: 700;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+  box-shadow: 0 4px 0 var(--ink);
+  display: inline-flex; align-items: center; gap: 10px;
+}
+.start-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--ink); }
+.start-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--ink); }
+.start-btn svg { width: 18px; height: 18px; }
+
+/* ============ APP ============ */
+.app { display: grid; grid-template-columns: 1fr 1fr; height: 100vh; position: relative; z-index: 2; }
+
+.video-pane {
+  background: linear-gradient(180deg, #1a2530, #2C3E50);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  padding: 20px;
+}
+.video-pane::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: radial-gradient(circle at 30% 20%, rgba(255,255,255,.04), transparent 50%);
+  pointer-events: none;
+}
+.video-wrap {
+  width: 100%; max-width: 720px;
+  aspect-ratio: 16/9;
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow-strong);
+  background: #000;
+  position: relative;
+}
+.video-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+.video-shield {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 18px;
+  z-index: 2;
+}
+.video-shield.active { pointer-events: auto; cursor: not-allowed; }
+.shield-msg {
+  background: var(--wool);
+  color: var(--ink);
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .4s ease, transform .4s ease;
+  box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 8px;
+}
+.video-shield.active .shield-msg { opacity: 1; transform: translateY(0); }
+.shield-msg svg { width: 14px; height: 14px; color: var(--rose-deep); }
+
+.cal-badge {
+  position: absolute; top: 12px; left: 12px; z-index: 5;
+  background: var(--amber); color: var(--ink);
+  padding: 6px 12px; border-radius: 6px;
+  font-size: 12px; font-weight: 700; font-family: monospace;
+  display: none;
+}
+.cal-badge.visible { display: block; }
+
+.activity-pane {
+  background: var(--paper);
+  overflow-y: auto;
+  position: relative;
+  padding: 0 40px 60px;
+}
+.activity-pane::-webkit-scrollbar { width: 8px; }
+.activity-pane::-webkit-scrollbar-thumb { background: var(--grass-soft); border-radius: 4px; }
+
+.progress-bar {
+  display: flex; gap: 8px;
+  position: sticky; top: 0; background: var(--paper);
+  padding: 28px 0 18px; z-index: 5;
+  align-items: center;
+}
+.progress-step {
+  flex: 1; height: 6px; border-radius: 3px; background: var(--wool-dark);
+  position: relative; overflow: hidden;
+}
+.progress-step.done { background: var(--grass); }
+.progress-step.active { background: var(--grass-soft); }
+.progress-step.active::after {
+  content: ''; position: absolute; inset: 0;
+  background: var(--grass);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.progress-label {
+  font-size: 12px; font-weight: 700;
+  color: var(--ink-soft);
+  letter-spacing: .08em; text-transform: uppercase;
+  min-width: 64px; text-align: right;
+}
+@keyframes pulse { 0%,100% { opacity: .35 } 50% { opacity: 1 } }
+
+.station, .diary, .waiting { display: none; }
+.station.visible, .diary.visible, .waiting.visible { display: block; animation: fadeIn .5s ease; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.station-header { margin-bottom: 22px; }
+.station-tag {
+  display: inline-block;
+  background: var(--rose);
+  color: var(--rose-deep);
+  font-weight: 700; font-size: 12px;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+.station h2 { font-size: 28px; line-height: 1.2; color: var(--ink); }
+.station .moment {
+  font-style: italic; color: var(--ink-soft);
+  margin-top: 6px; font-family: 'Fraunces', serif;
+}
+
+.task {
+  background: var(--wool);
+  border-radius: var(--r);
+  padding: 22px 24px;
+  margin-bottom: 14px;
+  border-left: 4px solid var(--grass);
+}
+.task.meta { border-left-color: var(--rose-deep); background: var(--rose-soft); }
+.task-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--grass-deep);
+  margin-bottom: 10px;
+}
+.task.meta .task-label { color: var(--rose-deep); }
+.task-label svg { width: 14px; height: 14px; }
+.task-question {
+  font-size: 18px; line-height: 1.4;
+  margin-bottom: 14px;
+  font-family: 'Fraunces', serif;
+}
+.task-hint { font-size: 13px; color: var(--ink-soft); margin-bottom: 14px; }
+
+.options { display: grid; gap: 10px; }
+.options.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.options.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.option {
+  background: white;
+  border: 2px solid var(--wool-dark);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 12px;
+  font-family: inherit; font-size: 15px;
+  text-align: left;
+  transition: all .2s ease;
+  color: var(--ink);
+  width: 100%;
+}
+.option:hover { border-color: var(--grass); transform: translateY(-1px); }
+.option.selected { border-color: var(--grass); background: var(--grass-soft); }
+.option .opt-icon {
+  width: 36px; height: 36px; flex-shrink: 0;
+  color: var(--grass-deep);
+  display: flex; align-items: center; justify-content: center;
+}
+.option .opt-icon svg { width: 100%; height: 100%; }
+.option .opt-text { flex: 1; }
+
+.select-counter {
+  font-size: 13px; color: var(--ink-soft);
+  text-align: right; margin-top: 10px;
+  font-weight: 700;
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  background: white; border: 2px solid var(--wool-dark);
+  padding: 9px 18px; border-radius: 999px;
+  cursor: pointer; font-family: inherit; font-size: 14px;
+  transition: all .2s ease;
+  color: var(--ink);
+}
+.chip:hover { border-color: var(--rose-deep); }
+.chip.selected {
+  background: var(--rose); border-color: var(--rose-deep);
+  color: #6E3A40; font-weight: 700;
+}
+
+/* due personaggi affiancati (fermata 2) */
+.duo {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin-bottom: 14px;
+}
+.duo-card {
+  background: white; border-radius: 12px; padding: 14px 12px;
+  text-align: center; border: 2px solid var(--wool-dark);
+}
+.duo-card.bianco { border-top: 6px solid var(--wool-dark); }
+.duo-card.nero { border-top: 6px solid var(--ink); }
+.duo-card svg { width: 90px; height: 90px; }
+.duo-label {
+  font-size: 12px; font-weight: 700;
+  color: var(--ink-soft);
+  letter-spacing: .08em; margin-top: 4px;
+}
+
+/* drag and drop */
+.dnd-list { display: flex; flex-direction: column; gap: 8px; }
+.dnd-item {
+  background: white; padding: 14px 16px; border-radius: 10px;
+  border: 2px solid var(--wool-dark);
+  cursor: grab;
+  display: flex; align-items: center; gap: 12px;
+  transition: all .2s ease;
+  user-select: none;
+}
+.dnd-item:hover { border-color: var(--grass); }
+.dnd-item.dragging { opacity: 0.4; cursor: grabbing; }
+.dnd-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--grass); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; flex-shrink: 0;
+}
+.dnd-handle { color: var(--ink-soft); margin-left: auto; }
+.dnd-handle svg { width: 18px; height: 18px; }
+
+.text-input {
+  width: 100%; padding: 14px 16px;
+  border: 2px solid var(--wool-dark); border-radius: 10px;
+  font-family: inherit; font-size: 15px;
+  resize: vertical; min-height: 100px;
+  background: white; color: var(--ink);
+  line-height: 1.5;
+}
+.text-input:focus { outline: none; border-color: var(--grass); }
+
+.advance-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--grass-deep); color: var(--wool);
+  border: none; padding: 14px 28px; border-radius: 999px;
+  font-family: inherit; font-size: 15px; font-weight: 700;
+  cursor: pointer;
+  margin-top: 22px;
+  transition: all .2s ease;
+  box-shadow: 0 3px 0 var(--ink);
+}
+.advance-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 0 var(--ink); }
+.advance-btn:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 2px 0 var(--ink); }
+.advance-btn:disabled {
+  background: var(--wool-dark); color: var(--ink-soft);
+  cursor: not-allowed; box-shadow: none;
+}
+.advance-btn svg { width: 18px; height: 18px; }
+
+.waiting { text-align: center; padding-top: 40px; }
+.waiting svg.bounce { width: 80px; height: 80px; color: var(--grass-deep); margin-bottom: 18px; animation: bounce 1.6s ease-in-out infinite; }
+@keyframes bounce {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-8px) rotate(2deg); }
+}
+.waiting h3 { font-size: 22px; color: var(--grass-deep); margin-bottom: 8px; }
+.waiting p { color: var(--ink-soft); font-style: italic; font-family: 'Fraunces', serif; font-size: 16px; }
+
+.diary-hero {
+  text-align: center;
+  background: linear-gradient(135deg, var(--grass-soft), var(--rose));
+  padding: 36px 24px 32px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.diary-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 70% 30%, rgba(255,255,255,.3), transparent 50%);
+  pointer-events: none;
+}
+.diary-hero h2 { font-size: 32px; color: var(--grass-deep); margin-bottom: 6px; position: relative; }
+.diary-hero p { color: var(--ink); font-style: italic; font-family: 'Fraunces', serif; position: relative; }
+.diary-hero .student-name {
+  display: inline-block;
+  background: var(--wool);
+  color: var(--grass-deep);
+  padding: 4px 14px; border-radius: 999px;
+  font-style: normal; font-weight: 700; font-family: inherit;
+  margin-top: 8px;
+}
+.diary-entry {
+  background: var(--wool);
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-bottom: 12px;
+  border-left: 4px solid var(--grass);
+}
+.diary-entry h3 {
+  font-size: 16px; margin-bottom: 12px;
+  color: var(--grass-deep);
+  font-family: 'Fraunces', serif;
+  display: flex; align-items: center; gap: 8px;
+}
+.diary-entry h3 .num {
+  width: 22px; height: 22px;
+  background: var(--grass); color: white;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; font-family: inherit;
+}
+.diary-block { margin-bottom: 10px; }
+.diary-block:last-child { margin-bottom: 0; }
+.diary-block .label-mini {
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-soft); font-weight: 700;
+  margin-bottom: 4px;
+}
+.diary-block.meta .label-mini { color: var(--rose-deep); }
+.diary-block .answer {
+  font-size: 14px; color: var(--ink); line-height: 1.5;
+}
+
+.diary-actions {
+  display: flex; gap: 12px; margin-top: 28px;
+  flex-wrap: wrap;
+}
+.diary-btn {
+  flex: 1; min-width: 160px;
+  padding: 14px 20px;
+  border: none; border-radius: 999px;
+  font-family: inherit; font-size: 15px; font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.diary-btn.primary { background: var(--grass-deep); color: var(--wool); box-shadow: 0 3px 0 var(--ink); }
+.diary-btn.secondary { background: var(--wool); color: var(--ink); border: 2px solid var(--wool-dark); }
+.diary-btn:hover { transform: translateY(-2px); }
+.diary-btn.primary:hover { box-shadow: 0 5px 0 var(--ink); }
+.diary-btn svg { width: 16px; height: 16px; }
+
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  .app { display: block; height: auto; }
+  .video-pane {
+    position: sticky; top: 0; z-index: 10;
+    height: 38vh; min-height: 220px;
+    padding: 12px;
+  }
+  .video-wrap { width: 100%; }
+  .activity-pane { padding: 0 24px 60px; min-height: 62vh; }
+  .progress-bar { padding: 20px 0 14px; }
+  .station h2 { font-size: 24px; }
+  .options.grid-3 { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ ICONE SVG (sprite) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>
+    </symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+    </symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12h14M13 5l7 7-7 7"/>
+    </symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M8 5v14l11-7z"/>
+    </symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+    </symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="9" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/>
+      <circle cx="15" cy="6" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="15" cy="18" r="1.4"/>
+    </symbol>
+    <symbol id="i-pdf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>
+    </symbol>
+    <symbol id="i-restart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>
+    </symbol>
+    <!-- Geri (icona welcome): vecchino con cappello -->
+    <symbol id="i-geri" viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 26q0 -10 18 -10t18 10" fill="#8B6F47"/>
+      <ellipse cx="40" cy="26" rx="22" ry="3" fill="#8B6F47"/>
+      <ellipse cx="40" cy="44" rx="14" ry="16" fill="#F5D6B8"/>
+      <circle cx="34" cy="42" r="3" fill="none" stroke-width="1.4"/>
+      <circle cx="46" cy="42" r="3" fill="none" stroke-width="1.4"/>
+      <path d="M37 42h6" stroke-width="1.4"/>
+      <path d="M34 52q6 3 12 0"/>
+      <path d="M30 60h20l4 14H26z" fill="#6FA84D"/>
+    </symbol>
+
+    <!-- icone osservazione fermata 1 -->
+    <symbol id="o-chess" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+      <rect x="4" y="4" width="24" height="24" rx="2"/>
+      <rect x="4" y="4" width="6" height="6" fill="currentColor" stroke="none"/>
+      <rect x="16" y="4" width="6" height="6" fill="currentColor" stroke="none"/>
+      <rect x="10" y="10" width="6" height="6" fill="currentColor" stroke="none"/>
+      <rect x="22" y="10" width="6" height="6" fill="currentColor" stroke="none"/>
+      <rect x="4" y="16" width="6" height="6" fill="currentColor" stroke="none"/>
+      <rect x="16" y="16" width="6" height="6" fill="currentColor" stroke="none"/>
+      <rect x="10" y="22" width="6" height="6" fill="currentColor" stroke="none"/>
+      <rect x="22" y="22" width="6" height="6" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="o-friends" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="13" r="3"/><circle cx="21" cy="13" r="3"/>
+      <path d="M5 24c1-3 3-5 6-5s4 2 5 4M21 24c1-3 3-5 6-5"/>
+    </symbol>
+    <symbol id="o-alone" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="16" cy="12" r="4"/>
+      <path d="M9 26c1-4 3-7 7-7s6 3 7 7"/>
+    </symbol>
+    <symbol id="o-tree" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 4q-7 6 -7 12q0 5 7 5q7 0 7-5q0 -6 -7-12z" fill="#C9DFB8"/>
+      <path d="M16 21v8M14 28h4"/>
+    </symbol>
+    <symbol id="o-leaf" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 6c-10 0-16 6-16 16 10 0 16-6 16-16z" fill="#F0A830"/>
+      <path d="M6 22l16-16"/>
+    </symbol>
+    <symbol id="o-bench" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="14" width="22" height="3" fill="#8B6F47" stroke="none"/>
+      <rect x="5" y="18" width="22" height="2" fill="#8B6F47" stroke="none"/>
+      <path d="M8 20v6M24 20v6"/>
+    </symbol>
+
+    <!-- Geri Bianco / Nero (fermata 2) -->
+    <symbol id="o-geri-bianco" viewBox="0 0 100 100">
+      <path d="M30 32q0 -12 20 -12t20 12 z" fill="#8B6F47" stroke="#2C3E50" stroke-width="1.5"/>
+      <ellipse cx="50" cy="32" rx="22" ry="3" fill="#8B6F47" stroke="#2C3E50" stroke-width="1.5"/>
+      <ellipse cx="50" cy="55" rx="18" ry="20" fill="#F5D6B8" stroke="#2C3E50" stroke-width="1.5"/>
+      <circle cx="42" cy="52" r="4" fill="#FFF" stroke="#2C3E50" stroke-width="1.4"/>
+      <circle cx="58" cy="52" r="4" fill="#FFF" stroke="#2C3E50" stroke-width="1.4"/>
+      <circle cx="42" cy="52" r="1.5" fill="#2C3E50"/>
+      <circle cx="58" cy="52" r="1.5" fill="#2C3E50"/>
+      <path d="M46 52h8" stroke="#2C3E50" stroke-width="1.4"/>
+      <path d="M40 64q5 4 10 4t10 -4" fill="none" stroke="#2C3E50" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M36 60q1 -2 3 -2M61 60q1 -2 3 -2" fill="none" stroke="#E8B5BB" stroke-width="2.5" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="o-geri-nero" viewBox="0 0 100 100">
+      <path d="M30 32q0 -12 20 -12t20 12 z" fill="#5A6E7E" stroke="#2C3E50" stroke-width="1.5"/>
+      <ellipse cx="50" cy="32" rx="22" ry="3" fill="#5A6E7E" stroke="#2C3E50" stroke-width="1.5"/>
+      <ellipse cx="50" cy="55" rx="18" ry="20" fill="#E8B59B" stroke="#2C3E50" stroke-width="1.5"/>
+      <path d="M37 50l8 4M55 50l8 4M55 50l-8 4M37 50l8 -4" stroke="#2C3E50" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M40 68q5 -3 10 -3t10 3" fill="none" stroke="#2C3E50" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M34 44q3 -2 7 0M59 44q3 -2 7 0" stroke="#2C3E50" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    </symbol>
+
+    <!-- icone fermata 3 (azioni del prepotente) -->
+    <symbol id="o-spinge" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="22" cy="10" r="3"/>
+      <path d="M19 14l-3 8M21 18l4 6M19 22l-6 4"/>
+      <circle cx="9" cy="22" r="2"/>
+      <path d="M5 22l-3 -2"/>
+    </symbol>
+    <symbol id="o-occhi-cattivi" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 14l6 4M6 18l6 -4M20 14l6 4M20 18l6 -4"/>
+      <circle cx="9" cy="16" r="1" fill="currentColor"/>
+      <circle cx="23" cy="16" r="1" fill="currentColor"/>
+      <path d="M10 24q6 -2 12 0"/>
+    </symbol>
+    <symbol id="o-ride" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="16" cy="16" r="11"/>
+      <path d="M11 13l3 2-3 2M21 13l-3 2 3 2"/>
+      <path d="M9 20q7 6 14 0"/>
+    </symbol>
+    <symbol id="o-prende" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="12" y="6" width="8" height="6" rx="1"/>
+      <path d="M14 12v4h4v-4"/>
+      <path d="M10 18l8 4 8 -4"/>
+      <path d="M14 22v6"/>
+    </symbol>
+    <symbol id="o-non-sente" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="16" cy="16" rx="6" ry="8"/>
+      <circle cx="16" cy="16" r="2"/>
+      <line x1="6" y1="6" x2="26" y2="26" stroke-width="2.4"/>
+    </symbol>
+
+    <!-- icone fermata 4 (piano del Bianco) -->
+    <symbol id="o-pezzo-cade" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="14" cy="22" rx="6" ry="2" fill="#8B6F47" stroke="none"/>
+      <path d="M22 8l3 5-3 1z" fill="currentColor" stroke="none"/>
+      <path d="M22 14l-2 4M24 14l2 4" />
+    </symbol>
+    <symbol id="o-petto" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="16" cy="9" r="4"/>
+      <path d="M8 26q0 -10 8 -10t8 10"/>
+      <path d="M14 18l4 4M18 18l-4 4" stroke="#B96773" stroke-width="2.4"/>
+    </symbol>
+    <symbol id="o-scacco" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4l-2 4h12l-2 -4M8 8h16v4l-2 14H10L8 12z" fill="currentColor" stroke="none"/>
+      <path d="M6 28h20"/>
+    </symbol>
+
+    <!-- icone fermata 5 (esito) -->
+    <symbol id="o-tazza-vince" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 6h16v8a8 8 0 0 1-16 0z" fill="#F0A830" stroke="none"/>
+      <path d="M24 8h4v4a4 4 0 0 1-4 4M8 8h-4v4a4 4 0 0 0 4 4"/>
+      <path d="M12 22h8v4h-8z" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="o-pari" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 14h20M6 18h20"/>
+    </symbol>
+    <symbol id="o-confuso" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="16" cy="16" r="11"/>
+      <path d="M12 13q2 -3 5 -1q3 2 0 5q-1 1 -1 3"/>
+      <circle cx="16" cy="22" r="0.8" fill="currentColor"/>
+    </symbol>
+
+  </defs>
+</svg>
+
+<!-- ============ WELCOME ============ -->
+<div class="welcome" id="welcome">
+  <div class="welcome-card">
+    <div class="deco">
+      <svg width="52" height="52" viewBox="0 0 80 80"><use href="#i-geri"></use></svg>
+    </div>
+    <h1>La Mossa di Geri</h1>
+    <p class="subtitle">Un viaggio nel cortometraggio<br><strong>Geri's Game</strong></p>
+    <p class="desc">Guarderemo un cortometraggio senza parole. Il signor Geri sta giocando a scacchi nel parco. Ogni tanto il video si fermerà e tu risponderai a qualche domanda. Non ci sono risposte sbagliate: conta quello che hai visto e quello che senti.</p>
+    <input type="text" class="name-input" id="studentName" placeholder="Scrivi il tuo nome" maxlength="40">
+    <br>
+    <button class="start-btn" id="startBtn">
+      Inizia il viaggio
+      <svg><use href="#i-arrow"></use></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="app">
+
+  <!-- VIDEO -->
+  <div class="video-pane">
+    <div class="cal-badge" id="calBadge">0.0s</div>
+    <div class="video-wrap">
+      <iframe id="ytplayer"
+        src="https://www.youtube.com/embed/t3tMS3b-EFQ?enablejsapi=1&controls=0&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&disablekb=1"
+        allow="autoplay; encrypted-media"
+        allowfullscreen></iframe>
+      <div class="video-shield" id="shield">
+        <div class="shield-msg">
+          <svg><use href="#i-lock"></use></svg>
+          Rispondi alle domande per continuare
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ATTIVITÀ -->
+  <div class="activity-pane">
+    <div class="progress-bar">
+      <div class="progress-step" data-step="0"></div>
+      <div class="progress-step" data-step="1"></div>
+      <div class="progress-step" data-step="2"></div>
+      <div class="progress-step" data-step="3"></div>
+      <div class="progress-step" data-step="4"></div>
+      <div class="progress-label" id="progressLabel">0 / 5</div>
+    </div>
+
+    <div class="waiting visible" id="waiting">
+      <svg class="bounce" viewBox="0 0 80 80"><use href="#i-geri"></use></svg>
+      <h3>Guarda con attenzione</h3>
+      <p>Il video si fermerà quando sarà il momento di pensare insieme.</p>
+    </div>
+
+    <!-- FERMATA 1 -->
+    <div class="station" id="station-0">
+      <div class="station-header">
+        <span class="station-tag">Fermata 1 di 5</span>
+        <h2>Un signore al parco</h2>
+        <p class="moment">Il signor Geri si siede e prepara la scacchiera.</p>
+      </div>
+
+      <div class="task">
+        <div class="task-label"><svg><use href="#i-eye"></use></svg> Osservazione</div>
+        <div class="task-question">Chi sta giocando a scacchi?</div>
+        <div class="options" id="s0-obs">
+          <button class="option" data-val="solo"><span class="opt-icon"><svg><use href="#o-alone"></use></svg></span><span class="opt-text">Il signor Geri da solo (gioca contro sé stesso)</span></button>
+          <button class="option" data-val="amico"><span class="opt-icon"><svg><use href="#o-friends"></use></svg></span><span class="opt-text">Geri con un suo amico</span></button>
+          <button class="option" data-val="nipote"><span class="opt-icon"><svg><use href="#o-friends"></use></svg></span><span class="opt-text">Geri con un nipote</span></button>
+          <button class="option" data-val="due-signori"><span class="opt-icon"><svg><use href="#o-bench"></use></svg></span><span class="opt-text">Due signori che si conoscono al parco</span></button>
+        </div>
+      </div>
+
+      <div class="task meta">
+        <div class="task-label"><svg><use href="#i-heart"></use></svg> Cosa sento</div>
+        <div class="task-question">Che impressione ti dà questo signore all'inizio?</div>
+        <div class="chips" id="s0-meta">
+          <button class="chip" data-val="tranquillo">tranquillo</button>
+          <button class="chip" data-val="simpatico">simpatico</button>
+          <button class="chip" data-val="solo">un po' solo</button>
+          <button class="chip" data-val="anziano">anziano</button>
+          <button class="chip" data-val="gentile">gentile</button>
+          <button class="chip" data-val="strano">strano</button>
+        </div>
+      </div>
+
+      <button class="advance-btn" disabled data-advance="0">
+        Riprendi il video
+        <svg><use href="#i-play"></use></svg>
+      </button>
+    </div>
+
+    <!-- FERMATA 2 -->
+    <div class="station" id="station-1">
+      <div class="station-header">
+        <span class="station-tag">Fermata 2 di 5</span>
+        <h2>Due Geri in uno</h2>
+        <p class="moment">Quando si sposta dall'altra parte del tavolo, qualcosa è cambiato.</p>
+      </div>
+
+      <div class="task">
+        <div class="task-label"><svg><use href="#i-eye"></use></svg> Osservazione</div>
+        <div class="task-question">Confronta i due Geri. Che differenze noti?</div>
+        <div class="duo">
+          <div class="duo-card bianco"><svg viewBox="0 0 100 100"><use href="#o-geri-bianco"></use></svg><div class="duo-label">GERI GENTILE</div></div>
+          <div class="duo-card nero"><svg viewBox="0 0 100 100"><use href="#o-geri-nero"></use></svg><div class="duo-label">GERI PREPOTENTE</div></div>
+        </div>
+        <p class="task-hint">Tocca tutto quello che cambia tra i due.</p>
+        <div class="options grid-2" id="s1-obs">
+          <button class="option" data-val="sguardo">Lo sguardo</button>
+          <button class="option" data-val="sorriso">Il sorriso</button>
+          <button class="option" data-val="movimenti">Come muove le mani</button>
+          <button class="option" data-val="occhiali">Gli occhiali</button>
+          <button class="option" data-val="sopracciglia">Le sopracciglia</button>
+          <button class="option" data-val="cappello">Il cappello</button>
+        </div>
+      </div>
+
+      <div class="task meta">
+        <div class="task-label"><svg><use href="#i-heart"></use></svg> Cosa sento</div>
+        <div class="task-question">Per chi stai facendo il tifo adesso?</div>
+        <div class="options grid-3" id="s1-meta">
+          <button class="option" data-val="bianco"><span class="opt-text">Per il Geri gentile</span></button>
+          <button class="option" data-val="nero"><span class="opt-text">Per il Geri prepotente</span></button>
+          <button class="option" data-val="entrambi"><span class="opt-text">Per tutti e due</span></button>
+        </div>
+      </div>
+
+      <button class="advance-btn" disabled data-advance="1">
+        Riprendi il video
+        <svg><use href="#i-play"></use></svg>
+      </button>
+    </div>
+
+    <!-- FERMATA 3 -->
+    <div class="station" id="station-2">
+      <div class="station-header">
+        <span class="station-tag">Fermata 3 di 5</span>
+        <h2>Il Geri prepotente comanda</h2>
+        <p class="moment">Il "prepotente" sta facendo passare un brutto momento al "gentile".</p>
+      </div>
+
+      <div class="task">
+        <div class="task-label"><svg><use href="#i-eye"></use></svg> Osservazione</div>
+        <div class="task-question">Cosa fa il Geri prepotente al Geri gentile? Tocca tutto quello che hai visto.</div>
+        <p class="task-hint">Ricorda: nel video non si parla. Tutto si capisce dai gesti, dalle facce, dagli occhi.</p>
+        <div class="options grid-2" id="s2-obs">
+          <button class="option" data-val="prende"><span class="opt-icon"><svg><use href="#o-prende"></use></svg></span><span class="opt-text">Prende i suoi pezzi senza chiedere</span></button>
+          <button class="option" data-val="occhi"><span class="opt-icon"><svg><use href="#o-occhi-cattivi"></use></svg></span><span class="opt-text">Lo guarda male</span></button>
+          <button class="option" data-val="ride"><span class="opt-icon"><svg><use href="#o-ride"></use></svg></span><span class="opt-text">Ride di lui</span></button>
+          <button class="option" data-val="spinge"><span class="opt-icon"><svg><use href="#o-spinge"></use></svg></span><span class="opt-text">Si muove velocemente per fargli pressione</span></button>
+          <button class="option" data-val="ignora"><span class="opt-icon"><svg><use href="#o-non-sente"></use></svg></span><span class="opt-text">Fa finta di non vederlo</span></button>
+        </div>
+      </div>
+
+      <div class="task meta">
+        <div class="task-label"><svg><use href="#i-heart"></use></svg> Cosa sento</div>
+        <div class="task-question">Ti è mai capitato di trovarti davanti a qualcuno che si comporta così?</div>
+        <p class="task-hint">La tua risposta resta privata: solo tu la vedi.</p>
+        <div class="options grid-3" id="s2-meta">
+          <button class="option" data-val="si"><span class="opt-text">Sì, è successo</span></button>
+          <button class="option" data-val="no"><span class="opt-text">No, mai</span></button>
+          <button class="option" data-val="forse"><span class="opt-text">Non sono sicuro</span></button>
+        </div>
+      </div>
+
+      <button class="advance-btn" disabled data-advance="2">
+        Riprendi il video
+        <svg><use href="#i-play"></use></svg>
+      </button>
+    </div>
+
+    <!-- FERMATA 4 -->
+    <div class="station" id="station-3">
+      <div class="station-header">
+        <span class="station-tag">Fermata 4 di 5</span>
+        <h2>Il piano del Geri gentile</h2>
+        <p class="moment">Il Geri gentile sta perdendo. Ma sta preparando qualcosa.</p>
+      </div>
+
+      <div class="task">
+        <div class="task-label"><svg><use href="#i-eye"></use></svg> Osservazione</div>
+        <div class="task-question">Trascina queste tre azioni del Geri gentile nell'ordine giusto, da quella che fa per prima a quella che fa per ultima.</div>
+        <p class="task-hint">Tocca e trascina su e giù per riordinare.</p>
+        <div class="dnd-list" id="s3-dnd">
+          <div class="dnd-item" draggable="true" data-val="petto"><span class="dnd-num">1</span><span>Si stringe il petto fingendo di stare male</span><span class="dnd-handle"><svg><use href="#i-grip"></use></svg></span></div>
+          <div class="dnd-item" draggable="true" data-val="scacco"><span class="dnd-num">2</span><span>Approfitta della distrazione e dà scacco matto</span><span class="dnd-handle"><svg><use href="#i-grip"></use></svg></span></div>
+          <div class="dnd-item" draggable="true" data-val="pezzo"><span class="dnd-num">3</span><span>Lascia cadere un pezzo dalla scacchiera</span><span class="dnd-handle"><svg><use href="#i-grip"></use></svg></span></div>
+        </div>
+      </div>
+
+      <div class="task meta">
+        <div class="task-label"><svg><use href="#i-heart"></use></svg> Cosa ne penso</div>
+        <div class="task-question">La trovata del Geri gentile ti sembra...</div>
+        <p class="task-hint">Puoi scegliere anche più di una parola.</p>
+        <div class="chips" id="s3-meta">
+          <button class="chip" data-val="furba">furba</button>
+          <button class="chip" data-val="coraggiosa">coraggiosa</button>
+          <button class="chip" data-val="divertente">divertente</button>
+          <button class="chip" data-val="scorretta">un po' scorretta</button>
+          <button class="chip" data-val="meritata">meritata</button>
+          <button class="chip" data-val="rischiosa">rischiosa</button>
+        </div>
+      </div>
+
+      <button class="advance-btn" disabled data-advance="3">
+        Riprendi il video
+        <svg><use href="#i-play"></use></svg>
+      </button>
+    </div>
+
+    <!-- FERMATA 5 -->
+    <div class="station" id="station-4">
+      <div class="station-header">
+        <span class="station-tag">Fermata 5 di 5</span>
+        <h2>L'ultima mossa</h2>
+        <p class="moment">La partita è finita.</p>
+      </div>
+
+      <div class="task">
+        <div class="task-label"><svg><use href="#i-eye"></use></svg> Osservazione</div>
+        <div class="task-question">Alla fine della partita, chi vince?</div>
+        <div class="options grid-2" id="s4-obs">
+          <button class="option" data-val="gentile"><span class="opt-icon"><svg><use href="#o-tazza-vince"></use></svg></span><span class="opt-text">Vince il Geri gentile</span></button>
+          <button class="option" data-val="prepotente"><span class="opt-icon"><svg><use href="#o-tazza-vince"></use></svg></span><span class="opt-text">Vince il Geri prepotente</span></button>
+          <button class="option" data-val="pari"><span class="opt-icon"><svg><use href="#o-pari"></use></svg></span><span class="opt-text">Pareggiano</span></button>
+          <button class="option" data-val="boh"><span class="opt-icon"><svg><use href="#o-confuso"></use></svg></span><span class="opt-text">Non si capisce</span></button>
+        </div>
+      </div>
+
+      <div class="task meta">
+        <div class="task-label"><svg><use href="#i-heart"></use></svg> Una cosa per te</div>
+        <div class="task-question">Una cosa che ti porti via da questo video.</div>
+        <p class="task-hint">Anche solo una parola, una frase corta. Quello che ti resta dentro adesso.</p>
+        <textarea class="text-input" id="s4-meta" placeholder="Scrivi qui..." maxlength="240"></textarea>
+      </div>
+
+      <button class="advance-btn" disabled data-advance="4">
+        Vai al tuo Diario
+        <svg><use href="#i-arrow"></use></svg>
+      </button>
+    </div>
+
+    <!-- DIARIO -->
+    <div class="diary" id="diary">
+      <div class="diary-hero">
+        <h2>Il Diario della Mossa</h2>
+        <p>Quello che hai visto, sentito e pensato</p>
+        <div class="student-name" id="diaryName">—</div>
+      </div>
+      <div id="diaryContent"></div>
+      <div class="diary-actions">
+        <button class="diary-btn primary" id="pdfBtn">
+          <svg><use href="#i-pdf"></use></svg>
+          Scarica il diario in PDF
+        </button>
+        <button class="diary-btn secondary" id="restartBtn">
+          <svg><use href="#i-restart"></use></svg>
+          Ricomincia
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ============ CONFIG ============ */
+/* TIMESTAMP delle 5 fermate (in secondi). Calibra al primo test:
+   apri la pagina con ?cal=1 in fondo all'URL per vedere il currentTime.
+   Il video dura 4:40 = 280s circa. */
+const STOPS = [30, 90, 150, 210, 265];
+
+const STATION_TITLES = [
+  "Un signore al parco",
+  "Due Geri in uno",
+  "Il Geri prepotente comanda",
+  "Il piano del Geri gentile",
+  "L'ultima mossa"
+];
+
+/* ============ STATO ============ */
+const state = {
+  studentName: '',
+  current: -1,
+  consumed: [false,false,false,false,false],
+  answers: [
+    { obs: '', meta: '' },        // s0 single + chip
+    { obs: [], meta: '' },        // s1 multi + single
+    { obs: [], meta: '' },        // s2 multi + single
+    { obs: [], meta: [] },        // s3 drag + chips
+    { obs: '', meta: '' }         // s4 single + textarea
+  ]
+};
+
+const ANSWER_LABELS = {
+  // fermata 1 osservazione
+  solo: "Geri da solo: gioca contro sé stesso",
+  amico: "Geri con un amico",
+  nipote: "Geri con un nipote",
+  'due-signori': "Due signori che si conoscono",
+  // chip impressioni
+  tranquillo: "tranquillo", simpatico: "simpatico", anziano: "anziano",
+  gentile: "gentile", strano: "strano",
+  // fermata 2 differenze
+  sguardo: "lo sguardo", sorriso: "il sorriso", movimenti: "i movimenti delle mani",
+  occhiali: "gli occhiali", sopracciglia: "le sopracciglia", cappello: "il cappello",
+  // tifo (fermata 2 meta)
+  bianco: "il Geri gentile", nero: "il Geri prepotente", entrambi: "tutti e due",
+  // fermata 3 osservazione
+  prende: "prende i pezzi senza chiedere",
+  occhi: "lo guarda male",
+  ride: "ride di lui",
+  spinge: "lo mette sotto pressione",
+  ignora: "fa finta di non vederlo",
+  // fermata 3 meta
+  si: "Sì, mi è successo", no: "No, mai", forse: "Non sono sicuro/a",
+  // fermata 4 ordini
+  petto: "si stringe il petto fingendo malore",
+  scacco: "approfitta e dà scacco matto",
+  pezzo: "lascia cadere un pezzo dalla scacchiera",
+  // chip giudizio
+  furba: "furba", coraggiosa: "coraggiosa", divertente: "divertente",
+  scorretta: "un po' scorretta", meritata: "meritata", rischiosa: "rischiosa",
+  // fermata 5 esito
+  gentile: "vince il Geri gentile",
+  prepotente: "vince il Geri prepotente",
+  pari: "pareggiano",
+  boh: "non si capisce",
+  // chip Geri 1 (sovrapposizione: 'solo' è anche un chip — gestito sotto)
+  soloChip: "un po' solo"
+};
+
+/* ============ YOUTUBE ============ */
+let player = null, ytReady = false, pollHandle = null;
+
+window.onYouTubeIframeAPIReady = function() {
+  player = new YT.Player('ytplayer', {
+    events: { 'onReady': () => { ytReady = true; }, 'onStateChange': onPlayerStateChange }
+  });
+};
+(function loadYT() {
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+})();
+
+function onPlayerStateChange(e) {
+  if (e.data === YT.PlayerState.PLAYING) {
+    startPolling();
+    document.getElementById('shield').classList.remove('active');
+    showWaiting();
+  } else if (e.data === YT.PlayerState.PAUSED) {
+    stopPolling();
+  } else if (e.data === YT.PlayerState.ENDED) {
+    stopPolling();
+    if (!state.consumed[4]) triggerStop(4);
+  }
+}
+function startPolling() {
+  if (pollHandle) return;
+  pollHandle = setInterval(() => {
+    if (!player || !player.getCurrentTime) return;
+    const t = player.getCurrentTime();
+    if (calMode) document.getElementById('calBadge').textContent = t.toFixed(1) + 's';
+    for (let i = 0; i < STOPS.length; i++) {
+      if (!state.consumed[i] && t >= STOPS[i]) { triggerStop(i); break; }
+    }
+  }, 250);
+}
+function stopPolling() { if (pollHandle) { clearInterval(pollHandle); pollHandle = null; } }
+
+function triggerStop(idx) {
+  if (player) player.pauseVideo();
+  state.current = idx;
+  state.consumed[idx] = true;
+  document.getElementById('shield').classList.add('active');
+  showStation(idx);
+  updateProgress();
+}
+
+/* ============ NAV ============ */
+function showWaiting() {
+  document.querySelectorAll('.station').forEach(s => s.classList.remove('visible'));
+  document.getElementById('diary').classList.remove('visible');
+  document.getElementById('waiting').classList.add('visible');
+}
+function showStation(idx) {
+  document.getElementById('waiting').classList.remove('visible');
+  document.querySelectorAll('.station').forEach(s => s.classList.remove('visible'));
+  document.getElementById('diary').classList.remove('visible');
+  document.getElementById('station-' + idx).classList.add('visible');
+  document.querySelector('.activity-pane').scrollTop = 0;
+}
+function showDiary() {
+  document.getElementById('waiting').classList.remove('visible');
+  document.querySelectorAll('.station').forEach(s => s.classList.remove('visible'));
+  buildDiary();
+  document.getElementById('diary').classList.add('visible');
+  document.querySelector('.activity-pane').scrollTop = 0;
+}
+function updateProgress() {
+  document.querySelectorAll('.progress-step').forEach((el, i) => {
+    el.classList.remove('done', 'active');
+    if (i < state.current) el.classList.add('done');
+    else if (i === state.current) el.classList.add('active');
+  });
+  const done = Math.max(0, state.current);
+  document.getElementById('progressLabel').textContent = done + ' / 5';
+}
+
+/* ============ FERMATA 0 ============ */
+(function s0() {
+  const obsBox = document.getElementById('s0-obs');
+  const metaBox = document.getElementById('s0-meta');
+  obsBox.addEventListener('click', e => {
+    const b = e.target.closest('.option'); if (!b) return;
+    obsBox.querySelectorAll('.option').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    state.answers[0].obs = b.dataset.val;
+    validateS(0);
+  });
+  metaBox.addEventListener('click', e => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    metaBox.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
+    c.classList.add('selected');
+    state.answers[0].meta = c.dataset.val;
+    validateS(0);
+  });
+})();
+
+/* ============ FERMATA 1 ============ */
+(function s1() {
+  const obsBox = document.getElementById('s1-obs');
+  const metaBox = document.getElementById('s1-meta');
+  obsBox.addEventListener('click', e => {
+    const b = e.target.closest('.option'); if (!b) return;
+    const arr = state.answers[1].obs;
+    const i = arr.indexOf(b.dataset.val);
+    if (i >= 0) { arr.splice(i, 1); b.classList.remove('selected'); }
+    else { arr.push(b.dataset.val); b.classList.add('selected'); }
+    validateS(1);
+  });
+  metaBox.addEventListener('click', e => {
+    const b = e.target.closest('.option'); if (!b) return;
+    metaBox.querySelectorAll('.option').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    state.answers[1].meta = b.dataset.val;
+    validateS(1);
+  });
+})();
+
+/* ============ FERMATA 2 ============ */
+(function s2() {
+  const obsBox = document.getElementById('s2-obs');
+  const metaBox = document.getElementById('s2-meta');
+  obsBox.addEventListener('click', e => {
+    const b = e.target.closest('.option'); if (!b) return;
+    const arr = state.answers[2].obs;
+    const i = arr.indexOf(b.dataset.val);
+    if (i >= 0) { arr.splice(i, 1); b.classList.remove('selected'); }
+    else { arr.push(b.dataset.val); b.classList.add('selected'); }
+    validateS(2);
+  });
+  metaBox.addEventListener('click', e => {
+    const b = e.target.closest('.option'); if (!b) return;
+    metaBox.querySelectorAll('.option').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    state.answers[2].meta = b.dataset.val;
+    validateS(2);
+  });
+})();
+
+/* ============ FERMATA 3: DnD ============ */
+(function s3() {
+  const list = document.getElementById('s3-dnd');
+  let dragging = null;
+  list.addEventListener('dragstart', e => {
+    dragging = e.target.closest('.dnd-item');
+    if (dragging) dragging.classList.add('dragging');
+  });
+  list.addEventListener('dragend', () => {
+    if (dragging) dragging.classList.remove('dragging');
+    dragging = null;
+    captureOrder();
+  });
+  list.addEventListener('dragover', e => {
+    e.preventDefault();
+    const after = getAfter(list, e.clientY);
+    if (!dragging) return;
+    if (after == null) list.appendChild(dragging);
+    else list.insertBefore(dragging, after);
+  });
+  let ptrItem = null;
+  list.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch') return;
+    ptrItem = e.target.closest('.dnd-item');
+    if (!ptrItem) return;
+    ptrItem.classList.add('dragging');
+    list.setPointerCapture(e.pointerId);
+  });
+  list.addEventListener('pointermove', e => {
+    if (e.pointerType !== 'touch' || !ptrItem) return;
+    const after = getAfter(list, e.clientY);
+    if (after == null) list.appendChild(ptrItem);
+    else if (after !== ptrItem.nextSibling) list.insertBefore(ptrItem, after);
+  });
+  list.addEventListener('pointerup', e => {
+    if (e.pointerType !== 'touch' || !ptrItem) return;
+    ptrItem.classList.remove('dragging');
+    ptrItem = null;
+    captureOrder();
+  });
+  function getAfter(container, y) {
+    const items = [...container.querySelectorAll('.dnd-item:not(.dragging)')];
+    return items.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) return { offset, el: child };
+      return closest;
+    }, { offset: -Infinity, el: null }).el;
+  }
+  function captureOrder() {
+    const order = [...list.querySelectorAll('.dnd-item')].map(x => x.dataset.val);
+    state.answers[3].obs = order;
+    list.querySelectorAll('.dnd-item').forEach((el, i) => {
+      el.querySelector('.dnd-num').textContent = (i + 1);
+    });
+    validateS(3);
+  }
+  captureOrder();
+  // chips meta (multi-select)
+  const metaBox = document.getElementById('s3-meta');
+  metaBox.addEventListener('click', e => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    const arr = state.answers[3].meta;
+    const i = arr.indexOf(c.dataset.val);
+    if (i >= 0) { arr.splice(i, 1); c.classList.remove('selected'); }
+    else { arr.push(c.dataset.val); c.classList.add('selected'); }
+    validateS(3);
+  });
+})();
+
+/* ============ FERMATA 4 ============ */
+(function s4() {
+  const obsBox = document.getElementById('s4-obs');
+  const metaInput = document.getElementById('s4-meta');
+  obsBox.addEventListener('click', e => {
+    const b = e.target.closest('.option'); if (!b) return;
+    obsBox.querySelectorAll('.option').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    state.answers[4].obs = b.dataset.val;
+    validateS(4);
+  });
+  metaInput.addEventListener('input', () => {
+    state.answers[4].meta = metaInput.value.trim();
+    validateS(4);
+  });
+})();
+
+/* ============ VALIDAZIONE ============ */
+function validateS(idx) {
+  const a = state.answers[idx];
+  let ok = false;
+  if (idx === 0) ok = (a.obs && a.meta);
+  else if (idx === 1) ok = (a.obs.length >= 1 && a.meta);
+  else if (idx === 2) ok = (a.obs.length >= 1 && a.meta);
+  else if (idx === 3) ok = (a.obs && a.obs.length === 3 && a.meta.length >= 1);
+  else if (idx === 4) ok = (a.obs && a.meta && a.meta.length >= 2);
+  const btn = document.querySelector('[data-advance="' + idx + '"]');
+  if (btn) btn.disabled = !ok;
+}
+
+document.querySelectorAll('.advance-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const idx = parseInt(btn.dataset.advance, 10);
+    document.getElementById('shield').classList.remove('active');
+    if (idx === 4) {
+      state.current = 5;
+      updateProgress();
+      showDiary();
+    } else {
+      showWaiting();
+      if (player) player.playVideo();
+    }
+  });
+});
+
+/* ============ DIARIO ============ */
+function buildDiary() {
+  document.getElementById('diaryName').textContent = state.studentName || 'amico/a';
+  const c = document.getElementById('diaryContent');
+  c.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const div = document.createElement('div');
+    div.className = 'diary-entry';
+    div.innerHTML = `
+      <h3><span class="num">${i+1}</span> ${STATION_TITLES[i]}</h3>
+      <div class="diary-block">
+        <div class="label-mini">Osservazione</div>
+        <div class="answer">${escapeHtml(renderObs(i))}</div>
+      </div>
+      <div class="diary-block meta">
+        <div class="label-mini">Cosa sento</div>
+        <div class="answer">${escapeHtml(renderMeta(i))}</div>
+      </div>`;
+    c.appendChild(div);
+  }
+}
+function renderObs(idx) {
+  const a = state.answers[idx];
+  if (idx === 0) return ANSWER_LABELS[a.obs] || '—';
+  if (idx === 1) return a.obs.map(v => ANSWER_LABELS[v]).join(', ') || '—';
+  if (idx === 2) return a.obs.map(v => ANSWER_LABELS[v]).join(', ') || '—';
+  if (idx === 3) return a.obs.map((v, i) => (i+1) + '. ' + ANSWER_LABELS[v]).join('  →  ');
+  if (idx === 4) return ANSWER_LABELS[a.obs] || '—';
+}
+function renderMeta(idx) {
+  const a = state.answers[idx];
+  if (idx === 0) {
+    // 'solo' come chip è "un po' solo"
+    if (a.meta === 'solo') return ANSWER_LABELS.soloChip;
+    return ANSWER_LABELS[a.meta] || '—';
+  }
+  if (idx === 1) return ANSWER_LABELS[a.meta] || '—';
+  if (idx === 2) return ANSWER_LABELS[a.meta] || '—';
+  if (idx === 3) return a.meta.map(v => ANSWER_LABELS[v]).join(', ') || '—';
+  if (idx === 4) return '"' + a.meta + '"';
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============ PDF ============ */
+document.getElementById('pdfBtn').addEventListener('click', generatePDF);
+function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, M = 18;
+  let y = 22;
+
+  doc.setFillColor(79, 128, 51);
+  doc.rect(0, 0, W, 36, 'F');
+  doc.setTextColor(245, 240, 232);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(22);
+  doc.text('Il Diario della Mossa', M, 18);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+  doc.text("Geri's Game · Pixar 1997", M, 26);
+  doc.setFontSize(10);
+  doc.text(state.studentName || '—', W - M, 26, { align: 'right' });
+  const today = new Date();
+  doc.text(today.toLocaleDateString('it-IT'), W - M, 32, { align: 'right' });
+
+  y = 48;
+  doc.setTextColor(44, 62, 80);
+
+  for (let i = 0; i < 5; i++) {
+    if (y > 250) { doc.addPage(); y = 22; }
+    doc.setFillColor(245, 240, 232);
+    doc.rect(M, y - 6, W - 2*M, 8, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+    doc.setTextColor(79, 128, 51);
+    doc.text(`${i+1}. ${STATION_TITLES[i]}`, M + 2, y);
+
+    y += 8;
+    doc.setTextColor(44, 62, 80);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+    doc.text('OSSERVAZIONE', M + 2, y);
+    y += 4.5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    const obsLines = doc.splitTextToSize(renderObs(i), W - 2*M - 4);
+    doc.text(obsLines, M + 2, y);
+    y += obsLines.length * 5 + 3;
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+    doc.setTextColor(185, 103, 115);
+    doc.text('COSA SENTO', M + 2, y);
+    y += 4.5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    doc.setTextColor(44, 62, 80);
+    const metaLines = doc.splitTextToSize(renderMeta(i), W - 2*M - 4);
+    doc.text(metaLines, M + 2, y);
+    y += metaLines.length * 5 + 9;
+  }
+
+  if (y > 270) { doc.addPage(); y = 22; }
+  doc.setFont('helvetica', 'italic'); doc.setFontSize(10);
+  doc.setTextColor(90, 110, 126);
+  doc.text("Senza una sola parola, il signor Geri ci insegna che si può vincere", W/2, y + 10, { align: 'center' });
+  doc.text("la prepotenza con un sorriso e una buona idea.", W/2, y + 16, { align: 'center' });
+
+  doc.save(`Diario-della-Mossa_${(state.studentName || 'alunno').replace(/\s+/g,'_')}.pdf`);
+}
+
+/* ============ START / RESTART ============ */
+const calMode = new URLSearchParams(location.search).has('cal');
+if (calMode) document.getElementById('calBadge').classList.add('visible');
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  state.studentName = document.getElementById('studentName').value.trim();
+  document.getElementById('welcome').classList.add('hidden');
+  setTimeout(() => {
+    if (ytReady && player && player.playVideo) {
+      player.playVideo();
+    } else {
+      const wait = setInterval(() => {
+        if (ytReady && player && player.playVideo) {
+          clearInterval(wait);
+          player.playVideo();
+        }
+      }, 200);
+    }
+  }, 500);
+});
+
+document.getElementById('restartBtn').addEventListener('click', () => location.reload());
+</script>
+</body>
+</html>
